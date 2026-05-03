@@ -223,7 +223,11 @@ After fixing, evaluate from multiple dimensions to verify fixes and catch regres
 | 错误处理 | Graceful failure? | Error injection |
 
 **Execution:**
-- Run all tests: `npm test` → record pass/fail
+- Run targeted tests by module: `npx vitest run [相关测试文件/目录]` → record pass/fail
+  - **禁止全量测试**（`npm test` / `vitest run` 无参数），全量测试消耗过多CPU和时间
+  - 只运行本轮修改涉及的模块测试（如 `npx vitest run src/games/three-kingdoms/engine/map/`）
+  - 修复后回归验证也只运行受影响模块的测试
+  - 全量测试仅在最终验收时执行一次
 - Take screenshots of key UI states
 - Check for console errors/warnings
 - Verify data flow consistency
@@ -332,7 +336,7 @@ P2/P3 issues are logged for next round but don't block the current round.
    - 确认代码逻辑覆盖了所有场景
 
 2. 测试证据
-   - 运行相关测试: npm test -- [test-files]
+   - 运行相关测试（按模块，禁止全量）: `npx vitest run [相关测试文件或目录]`
    - 记录每个测试的通过/失败状态
    - 确认测试覆盖了正常/异常/边界场景
 
@@ -1049,6 +1053,7 @@ Task(B builder-batch2): 验证A+B域 → 写入 verification/builder-AB.md
 17. **Returning subagent output to main session** — Subagent results MUST go to files, main session only reads summaries
 18. **Running Builder/Challenger/Judge in parallel** — They are sequential: Builder output file → Challenger reads it → Judge reads both
 19. **Main session doing real work** — Main session orchestrates only; code reading, test running, and fixing are subagent tasks
+20. **Running full test suite during iteration** — Only run targeted module tests during inner loop; full suite reserved for final acceptance only
 
 ## Trigger Phrases
 
