@@ -55,32 +55,58 @@ Each round follows this **inner loop** that cycles until all issues are fixed:
 
 | Role | Responsibility | Method |
 |------|---------------|--------|
-| 🔨 Builder (构建者) | Reviews what was built, documents intended behavior and assumptions | Read code, specs, tests; produce a "behavior manifest" of what the system should do |
-| ⚔️ Challenger (挑战者) | Actively tries to break the system, finds edge cases and violations | Probe boundaries, inject faults, stress test, look for contradictions in Builder's manifest |
-| ⚖️ Judge (裁决者) | Arbitrates findings, separates real bugs from false positives, prioritizes | Evaluate Challenger's evidence, confirm/deny issues, assign severity |
+| 🔨 Builder (构建者) | **证明**已实现的功能点和流程且通过测试 | 读代码、运行测试、截图验证；产出**有证据支撑**的行为清单 |
+| ⚔️ Challenger (挑战者) | **推翻**Builder的结论，找出漏洞/幻觉/无证据/无效证据 | 质疑每个"已实现"的结论，检查测试是否真实覆盖，验证证据链完整性 |
+| ⚖️ Judge (裁决者) | **裁决**双方论据，存在疑点时发起二次辩论 | 综合判断，如果疑点未消除则要求二次辩论，否则依据规则裁决 |
 
-#### Execution Flow
+#### Builder 职责：证明而非描述
+
+Builder不是"描述"系统应该做什么，而是**证明**系统已经做了什么：
 
 ```
-1. Builder produces behavior manifest:
-   - What should each feature do?
-   - What are the invariants?
-   - What are the assumptions?
-   - What are the known constraints?
+Builder 产出行为清单，每项必须包含：
+1. 功能点描述：具体做了什么
+2. 实现证据：哪个文件哪行代码实现了它
+3. 测试证据：哪个测试文件验证了它
+4. 测试结果：实际运行测试的通过/失败记录
+5. 覆盖证据：测试覆盖了哪些场景（正常/异常/边界）
 
-2. Challenger attacks the manifest:
-   - Which invariants can be violated?
-   - Which assumptions are wrong?
-   - Where do boundaries break?
-   - What inputs cause unexpected behavior?
-   - What sequences of actions lead to bad states?
-   - What happens when external dependencies fail?
+Builder 的结论必须可验证，不能是"应该实现了"或"看起来正确"
+```
 
-3. Judge evaluates findings:
-   - Is this a real bug or expected behavior?
-   - What is the severity (P0/P1/P2/P3)?
-   - What is the root cause?
-   - Is this reproducible?
+#### Challenger 职责：推翻而非补充
+
+Challenger不是"补充"更多测试，而是**推翻**Builder的结论：
+
+```
+Challenger 攻击方向：
+1. 漏洞攻击：Builder声称实现了X，但代码中找不到对应实现
+2. 幻觉攻击：Builder声称测试通过，但测试实际未运行或mock了关键逻辑
+3. 无证据攻击：Builder声称功能完整，但缺少集成测试或E2E测试
+4. 无效证据攻击：Builder的测试通过了，但测试本身有bug（如断言错误）
+5. 集成断裂攻击：单元测试通过，但系统间集成未验证
+6. 流程断裂攻击：短流程测试通过，但完整链路未覆盖
+
+Challenger 的每个质疑必须指出：
+- 具体哪个结论有问题
+- 为什么这个结论不可信
+- 缺少什么证据才能可信
+```
+
+#### Judge 职责：裁决而非妥协
+
+Judge不是"各打五十大板"，而是**基于证据裁决**：
+
+```
+Judge 裁决流程：
+1. 逐条审查Builder的证据链
+2. 逐条审查Challenger的质疑
+3. 判断每个质疑是否成立
+4. 如果存在疑点 → 发起二次辩论（Builder补充证据，Challenger再次攻击）
+5. 如果疑点消除 → 裁决通过
+6. 如果疑点未消除 → 判定为问题，进入修复流程
+
+Judge 不能因为"看起来合理"就裁决通过，必须基于证据
 ```
 
 #### Adversarial Attack Dimensions
@@ -220,15 +246,16 @@ P2/P3 issues are logged for next round but don't block the current round.
 
 ### Step 9: 核验环节 (Verification Phase)
 
-**开发完成后必须进入核验环节**，使用独立子任务/subagent逐个流程进行核验，避免上下文干扰。
+**开发完成后必须进入核验环节**，使用对抗性三角色进行深度核验，不能只是"运行测试看是否通过"。
 
 #### 核验原则
 
 ```
-1. 独立性: 每个核验任务使用独立subagent，避免上下文污染
-2. 完整性: 必须覆盖100%功能点和流程链路
-3. 真实性: 必须真实执行测试并验证结果，不能假设通过
-4. 链路性: 必须测试完整流程链路，不只是短流程集成测试
+1. 对抗性: 使用Builder/Challenger/Judge三角色，不是简单的测试执行
+2. 独立性: 每个角色使用独立subagent，避免上下文污染
+3. 完整性: 必须覆盖100%功能点和流程链路
+4. 真实性: 必须真实执行测试并验证结果，不能假设通过
+5. 深度性: 不只是"测试通过"，要验证测试本身是否有效
 ```
 
 #### 核验流程
@@ -239,10 +266,10 @@ P2/P3 issues are logged for next round but don't block the current round.
    - 梳理完整流程链路（从入口到出口）
    - 识别关键路径和分支路径
 
-2. 逐个流程核验
-   - 每个流程使用独立subagent
-   - subagent必须: 运行测试 → 验证结果 → 记录问题
-   - 不通过的流程立即进入修复循环
+2. 对抗性核验（每个流程独立执行）
+   - Builder: 证明该流程已实现且测试通过
+   - Challenger: 推翻Builder的结论，找漏洞/幻觉/无效证据
+   - Judge: 裁决，存在疑点则发起二次辩论
 
 3. 核验结果汇总
    - 统计通过/失败/未覆盖的流程
@@ -259,18 +286,118 @@ P2/P3 issues are logged for next round but don't block the current round.
 完整链路(必须): 入口 → A → B → C → D → ... → 出口
 ```
 
-#### 核验任务模板
+#### 核验任务模板（对抗性三角色）
 
-每个核验任务使用独立subagent:
+**每个流程的核验必须使用三个独立subagent：**
 
 ```
-任务: 核验 [流程名称]
-描述:
-1. 运行相关测试: npm test -- [test-file]
-2. 验证测试结果: 通过/失败/跳过
-3. 检查完整链路: [入口] → [步骤1] → [步骤2] → ... → [出口]
-4. 记录发现的问题
-输出: 核验结果 + 问题清单
+═══════════════════════════════════════════════════════
+任务1: Builder — 证明 [流程名称] 已实现
+═══════════════════════════════════════════════════════
+
+你是Builder角色。你的任务是**证明**以下流程已完整实现且测试通过。
+
+流程: [完整链路描述]
+
+请执行以下步骤，每步必须有具体证据：
+
+1. 实现证据
+   - 读取相关源代码文件
+   - 指出每个功能点的具体实现位置（文件:行号）
+   - 确认代码逻辑覆盖了所有场景
+
+2. 测试证据
+   - 运行相关测试: npm test -- [test-files]
+   - 记录每个测试的通过/失败状态
+   - 确认测试覆盖了正常/异常/边界场景
+
+3. 集成证据
+   - 确认测试不是mock了关键依赖
+   - 确认测试验证了系统间的真实交互
+   - 确认完整链路有端到端测试
+
+4. 产出行为清单
+   每项格式:
+   | 功能点 | 实现位置 | 测试文件 | 测试结果 | 覆盖场景 |
+
+输出: 行为清单 + 证据链
+```
+
+```
+═══════════════════════════════════════════════════════
+任务2: Challenger — 推翻Builder的结论
+═══════════════════════════════════════════════════════
+
+你是Challenger角色。你的任务是**推翻**Builder的结论。
+
+Builder的行为清单:
+[粘贴Builder的输出]
+
+请从以下方向攻击：
+
+1. 漏洞攻击
+   - Builder声称实现了X，代码中是否真的存在？
+   - 读取Builder引用的源代码，验证实现是否完整
+
+2. 幻觉攻击
+   - Builder声称测试通过，测试是否真的运行了？
+   - 测试是否mock了关键逻辑，导致测试无效？
+   - 测试断言是否正确（如expect(true).toBe(true)）？
+
+3. 无证据攻击
+   - 哪些功能点缺少集成测试？
+   - 哪些流程链路只有短流程测试？
+   - 哪些边界场景未被覆盖？
+
+4. 集成断裂攻击
+   - 单元测试通过，但系统间集成是否验证？
+   - 测试中的依赖是否真实（非mock）？
+
+5. 流程断裂攻击
+   - 完整链路是否覆盖（入口→...→出口）？
+   - 还是只测了中间某一段？
+
+每个质疑格式:
+| 质疑点 | Builder的结论 | 为什么不可信 | 缺少什么证据 |
+
+输出: 质疑清单 + 证据分析
+```
+
+```
+═══════════════════════════════════════════════════════
+任务3: Judge — 裁决双方论据
+═══════════════════════════════════════════════════════
+
+你是Judge角色。你的任务是**裁决**Builder和Challenger的论据。
+
+Builder的行为清单:
+[粘贴Builder的输出]
+
+Challenger的质疑清单:
+[粘贴Challenger的输出]
+
+请执行以下步骤：
+
+1. 逐条审查Builder的证据链
+   - 每个功能点的证据是否充分？
+   - 测试是否真实有效？
+
+2. 逐条审查Challenger的质疑
+   - 每个质疑是否成立？
+   - 质疑的证据是否可靠？
+
+3. 裁决
+   - 如果Challenger的质疑全部不成立 → 裁决通过
+   - 如果存在疑点 → 发起二次辩论
+   - 如果疑点未消除 → 判定为问题
+
+4. 二次辩论（如有疑点）
+   - 要求Builder补充证据
+   - 要求Challenger再次攻击
+   - 直到疑点消除或确认为问题
+
+输出格式:
+| 质疑点 | Challenger观点 | Builder补充 | Judge裁决 | 理由 |
 ```
 
 #### 核验完成标准
@@ -280,6 +407,8 @@ P2/P3 issues are logged for next round but don't block the current round.
 ✅ 所有测试通过
 ✅ 所有流程链路有完整测试（非短流程）
 ✅ 核验结果真实（实际运行验证）
+✅ Builder的每个结论有证据支撑
+✅ Challenger的每个质疑已裁决
 ✅ 问题清单已记录并分类
 ```
 
@@ -775,9 +904,13 @@ Step 5: Fix new issues (depends on Step 4)
 7. **Skipping re-evaluation** — Every fix needs verification
 8. **Running everything in main session** — Use subagents
 9. **Only short flow tests** — Must test complete flow chains, not just A→B→C
-10. **Skipping verification phase** — Must use independent subagents to verify after development
+10. **Skipping verification phase** — Must use adversarial 3-role verification
 11. **Assuming tests pass** — Must actually run tests and verify results, never assume
 12. **Incomplete coverage** — Must cover 100% of features and flow paths
+13. **Builder as describer** — Builder must prove with evidence, not describe behavior
+14. **Challenger as complimenter** — Challenger must try to disprove, not add more tests
+15. **Judge as compromiser** — Judge must decide based on evidence, not split the difference
+16. **Verification as test execution** — Verification is adversarial debate, not running tests
 
 ## Trigger Phrases
 
