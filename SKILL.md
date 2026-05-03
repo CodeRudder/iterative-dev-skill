@@ -145,12 +145,37 @@ The Challenger probes these dimensions:
    - Async operation failures
 ```
 
-**Execution:**
-- Launch 3 parallel subagents (Builder, Challenger, Judge)
-- Builder produces manifest first
-- Challenger attacks manifest + code
-- Judge evaluates all findings
-- Merge into unified issue set
+**Execution (文件输出模式):**
+
+```
+1. 主会话创建输出目录: docs/iterations/{name}/round-N/verification/
+
+2. 启动 Builder subagent (run_in_background: true):
+   prompt中包含: "将完整行为清单写入 docs/iterations/{name}/round-N/verification/builder-manifest.md"
+   同时: "完成后只返回一行摘要: 'Builder完成, 发现X个功能点, Y个有测试证据'"
+
+3. 等待Builder完成:
+   Read builder-manifest.md 确认输出存在
+
+4. 启动 Challenger subagent (run_in_background: true):
+   prompt中包含: "读取 docs/iterations/{name}/round-N/verification/builder-manifest.md 作为Builder的清单"
+   prompt中包含: "将完整攻击报告写入 docs/iterations/{name}/round-N/verification/challenger-attack.md"
+   同时: "完成后只返回一行摘要: 'Challenger完成, 发现X个有效质疑'"
+
+5. 等待Challenger完成:
+   Read challenger-attack.md 确认输出存在
+
+6. 启动 Judge subagent (run_in_background: true):
+   prompt中包含: "读取 builder-manifest.md 和 challenger-attack.md"
+   prompt中包含: "将完整裁决写入 docs/iterations/{name}/round-N/verification/judge-ruling.md"
+   同时: "完成后只返回一行摘要: 'Judge完成, 确认X个P0/Y个P1/Z个P2问题'"
+
+7. 等待Judge完成:
+   Read judge-ruling.md 获取问题清单摘要
+   → 进入 Step 2 (发现问题)
+```
+
+**注意**: Builder/Challenger/Judge 必须串行执行（后者依赖前者的输出文件），不可并行。
 
 ### Step 2: 发现问题 (Discover Issues)
 
@@ -286,9 +311,9 @@ P2/P3 issues are logged for next round but don't block the current round.
 完整链路(必须): 入口 → A → B → C → D → ... → 出口
 ```
 
-#### 核验任务模板（对抗性三角色）
+#### 核验任务模板（对抗性三角色 — 文件输出模式）
 
-**每个流程的核验必须使用三个独立subagent：**
+**每个流程的核验必须使用三个独立subagent，结果写入文件：**
 
 ```
 ═══════════════════════════════════════════════════════
@@ -320,7 +345,8 @@ P2/P3 issues are logged for next round but don't block the current round.
    每项格式:
    | 功能点 | 实现位置 | 测试文件 | 测试结果 | 覆盖场景 |
 
-输出: 行为清单 + 证据链
+**将完整结果写入文件: {output_path}/builder-manifest.md**
+完成后只返回一行摘要: "Builder完成, X个功能点有证据, Y个无证据"
 ```
 
 ```
@@ -330,8 +356,7 @@ P2/P3 issues are logged for next round but don't block the current round.
 
 你是Challenger角色。你的任务是**推翻**Builder的结论。
 
-Builder的行为清单:
-[粘贴Builder的输出]
+**先读取Builder的行为清单: {output_path}/builder-manifest.md**
 
 请从以下方向攻击：
 
@@ -360,7 +385,8 @@ Builder的行为清单:
 每个质疑格式:
 | 质疑点 | Builder的结论 | 为什么不可信 | 缺少什么证据 |
 
-输出: 质疑清单 + 证据分析
+**将完整攻击报告写入文件: {output_path}/challenger-attack.md**
+完成后只返回一行摘要: "Challenger完成, X个有效质疑(其中P0:Y, P1:Z)"
 ```
 
 ```
@@ -370,11 +396,9 @@ Builder的行为清单:
 
 你是Judge角色。你的任务是**裁决**Builder和Challenger的论据。
 
-Builder的行为清单:
-[粘贴Builder的输出]
-
-Challenger的质疑清单:
-[粘贴Challenger的输出]
+**先读取两份报告:**
+- Builder行为清单: {output_path}/builder-manifest.md
+- Challenger攻击报告: {output_path}/challenger-attack.md
 
 请执行以下步骤：
 
@@ -396,8 +420,30 @@ Challenger的质疑清单:
    - 要求Challenger再次攻击
    - 直到疑点消除或确认为问题
 
+**将完整裁决报告写入文件: {output_path}/judge-ruling.md**
+完成后只返回一行摘要: "Judge完成, 确认P0:X, P1:Y, P2:Z个问题"
 输出格式:
 | 质疑点 | Challenger观点 | Builder补充 | Judge裁决 | 理由 |
+```
+
+**主会话编排流程:**
+
+```
+1. 创建输出目录: mkdir -p docs/iterations/{name}/round-N/verification/
+
+2. 启动Builder subagent (run_in_background: true)
+   → 等待完成 → 确认 builder-manifest.md 已生成
+
+3. 启动Challenger subagent (run_in_background: true)
+   prompt中指定: "先读取 {path}/builder-manifest.md"
+   → 等待完成 → 确认 challenger-attack.md 已生成
+
+4. 启动Judge subagent (run_in_background: true)
+   prompt中指定: "先读取 {path}/builder-manifest.md 和 {path}/challenger-attack.md"
+   → 等待完成 → 确认 judge-ruling.md 已生成
+
+5. 主会话读取 judge-ruling.md 的结论部分（只读摘要，不读全文）
+   → 汇总问题清单 → 进入修复流程或报告给用户
 ```
 
 #### 核验完成标准
@@ -845,37 +891,126 @@ docs/
 **CRITICAL**: Main session orchestrates only. All work via subagents.
 
 ```
-Main session: Task planning, status tracking, user communication
-Subagents:   Code changes, test runs, reviews, screenshots
+Main session: Task dispatch, status tracking, user communication, reading result files for summary
+Subagents:   Code changes, test runs, reviews, screenshots, adversarial roles
 ```
 
-### Parallel Execution
+### File-Based Output Protocol (CRITICAL)
 
-Independent tasks run in parallel:
+**ALL subagent results MUST be written to files, NOT returned to the main session.**
 
-```
-# 对抗性评测 — 3 roles in parallel
-Task 1: Builder — produce behavior manifest
-Task 2: Challenger — attack the system
-Task 3: Judge — evaluate findings
-(Builder must finish before Challenger starts; Judge runs after Challenger)
-
-# 修复独立问题 — parallel
-Task A: Fix P0 bug in SystemA
-Task B: Fix P2 issue in SystemB
-```
-
-### Sequential Execution
-
-Dependent tasks run sequentially:
+Large outputs returned to the main session cause context pollution, making subsequent rounds unreliable. Every subagent that produces non-trivial output must write it to a designated file.
 
 ```
-Step 1: Adversarial test → finds issues
-Step 2: Fix issues (depends on Step 1)
-Step 3: Re-evaluate (depends on Step 2)
-Step 4: Architecture review (depends on Step 3)
-Step 5: Fix new issues (depends on Step 4)
-→ Loop until clean
+规则:
+1. 每个子任务必须将结果写入指定文件路径
+2. 主会话通过 Read 工具读取文件摘要，不接收完整返回
+3. 子任务使用 run_in_background: true 运行，避免阻塞
+4. 主会话通过 TaskOutput (block=false) 或 Read 工具检查进度和结果
+
+违反此规则的后果:
+- 主会话上下文被大量子任务输出填满
+- 后续轮次质量严重下降（上下文不足）
+- Builder/Challenger/Judge 三方辩论无法有效进行
+```
+
+#### Output File Naming Convention
+
+```
+docs/iterations/{name}/round-N/
+├── verification/                    # 核验输出目录
+│   ├── builder-manifest.md         # Builder 行为清单
+│   ├── challenger-attack.md        # Challenger 攻击报告
+│   ├── judge-ruling.md             # Judge 裁决报告
+│   ├── builder-round2.md           # 二次辩论 Builder（如有）
+│   ├── challenger-round2.md        # 二次辩论 Challenger（如有）
+│   └── verification-summary.md     # 核验汇总（主会话生成）
+├── arch-review.md                   # 架构审查
+├── issues.md                        # 问题清单
+├── report.md                        # 轮次报告
+└── plan.md                          # 轮次计划
+```
+
+#### Subagent Prompt Template (MUST follow)
+
+```
+每个子任务的 prompt 必须包含以下指令:
+
+"将你的完整结果写入文件: {output_file_path}
+使用 markdown 格式。不要将完整结果返回给调用方，只返回一行摘要。"
+```
+
+### Subagent Execution Patterns
+
+#### Pattern 1: Sequential Dependency Chain (Builder → Challenger → Judge)
+
+```
+# Step 1: Builder (后台运行，输出到文件)
+Task(B builder): 产出行为清单 → 写入 builder-manifest.md
+
+# Step 2: 等待Builder完成
+TaskOutput(builder, block=true) 或 Read builder-manifest.md
+
+# Step 3: Challenger (后台运行，读取Builder输出文件)
+Task(B challenger): 读取 builder-manifest.md → 攻击 → 写入 challenger-attack.md
+
+# Step 4: 等待Challenger完成
+TaskOutput(challenger, block=true) 或 Read challenger-attack.md
+
+# Step 5: Judge (后台运行，读取Builder+Challenger输出文件)
+Task(B judge): 读取 builder-manifest.md + challenger-attack.md → 裁决 → 写入 judge-ruling.md
+
+# Step 6: 等待Judge完成，读取摘要
+Read judge-ruling.md → 向用户报告结论
+```
+
+#### Pattern 2: Parallel Independent Tasks
+
+```
+# 并行启动多个独立修复任务（每个输出到文件）
+Task(A fix-p0): 修复问题I-01 → 写入 fixes/I-01.md
+Task(B fix-p1): 修复问题I-02 → 写入 fixes/I-02.md
+Task(C run-test): 运行测试 → 写入 test-results.md
+
+# 等待所有完成
+TaskOutput(A, block=true)
+TaskOutput(B, block=true)
+TaskOutput(C, block=true)
+```
+
+#### Pattern 3: Verification Phase (Step 9)
+
+```
+# 按功能域分批核验，每批3角色串行，批间可并行
+# 批次1: 编队系统 + 伤亡系统
+Task(B builder-batch1): 验证G+H域 → 写入 verification/builder-GH.md
+# 等待...
+Task(B challenger-batch1): 攻击G+H → 写入 verification/challenger-GH.md
+# 等待...
+Task(B judge-batch1): 裁决G+H → 写入 verification/judge-GH.md
+
+# 批次2: 地图+行军（与批次1的Judge可并行）
+Task(B builder-batch2): 验证A+B域 → 写入 verification/builder-AB.md
+...
+```
+
+### Main Session Responsibilities (ONLY)
+
+```
+主会话只负责:
+1. 创建任务列表 (TaskCreate)
+2. 分发子任务 (Task with subagent)
+3. 跟踪任务状态 (TaskUpdate/TaskList)
+4. 读取结果文件摘要 (Read tool, 只读关键结论)
+5. 向用户汇报进展
+6. 生成汇总文档 (verification-summary.md, report.md)
+7. 编排下一轮流程
+
+主会话禁止:
+- 直接运行测试（交给subagent）
+- 直接读取大量源代码（交给subagent）
+- 直接修复代码（交给subagent）
+- 将subagent的完整返回纳入上下文
 ```
 
 ## Metrics to Track
@@ -911,6 +1046,9 @@ Step 5: Fix new issues (depends on Step 4)
 14. **Challenger as complimenter** — Challenger must try to disprove, not add more tests
 15. **Judge as compromiser** — Judge must decide based on evidence, not split the difference
 16. **Verification as test execution** — Verification is adversarial debate, not running tests
+17. **Returning subagent output to main session** — Subagent results MUST go to files, main session only reads summaries
+18. **Running Builder/Challenger/Judge in parallel** — They are sequential: Builder output file → Challenger reads it → Judge reads both
+19. **Main session doing real work** — Main session orchestrates only; code reading, test running, and fixing are subagent tasks
 
 ## Trigger Phrases
 
