@@ -55,23 +55,36 @@ Each round follows this **inner loop** that cycles until all issues are fixed:
 
 | Role | Responsibility | Method |
 |------|---------------|--------|
-| 🔨 Builder (构建者) | **证明**已实现的功能点和流程且通过测试 | 读代码、运行测试、截图验证；产出**有证据支撑**的行为清单 |
+| 🔨 Builder (审核者) | **客观审核**开发计划是否完成、集成测试是否通过且测试是否有效 | 读代码、运行测试、验证测试有效性；产出**客观事实清单** |
 | ⚔️ Challenger (挑战者) | **推翻**Builder的结论，找出漏洞/幻觉/无证据/无效证据 | 质疑每个"已实现"的结论，检查测试是否真实覆盖，验证证据链完整性 |
 | ⚖️ Judge (裁决者) | **裁决**双方论据，存在疑点时发起二次辩论 | 综合判断，如果疑点未消除则要求二次辩论，否则依据规则裁决 |
 
-#### Builder 职责：证明而非描述
+#### Builder 职责：客观审核而非辩护
 
-Builder不是"描述"系统应该做什么，而是**证明**系统已经做了什么：
+Builder不是"证明"系统已经实现了什么（这会导致确认偏误），而是**客观审核**开发计划的完成状态：
 
 ```
-Builder 产出行为清单，每项必须包含：
-1. 功能点描述：具体做了什么
-2. 实现证据：哪个文件哪行代码实现了它
-3. 测试证据：哪个测试文件验证了它
-4. 测试结果：实际运行测试的通过/失败记录
-5. 覆盖证据：测试覆盖了哪些场景（正常/异常/边界）
+Builder 的核心职责：
+1. 审核开发计划（round-N/plan.md）中每个任务的完成状态
+2. 客观报告哪些已完成、哪些未完成、哪些部分完成
+3. 运行集成测试并报告结果
+4. 验证测试的有效性（测试是否真正验证了生产代码路径）
+5. 不遗漏、不夸大、不美化——如实报告
 
-Builder 的结论必须可验证，不能是"应该实现了"或"看起来正确"
+Builder 产出客观事实清单，每项必须包含：
+1. 计划任务ID：对应 plan.md 中的哪个任务
+2. 完成状态：✅完成 / ⬜未完成 / 🔄部分完成
+3. 实现证据：哪个文件哪行代码实现了它（如已完成）
+4. 测试证据：哪个测试文件验证了它（如已完成）
+5. 测试结果：实际运行测试的通过/失败记录
+6. 测试有效性评估：测试是否使用了真实子系统（非mock关键路径）
+7. 未完成原因：为什么未完成（如适用）
+
+Builder 必须遵循的原则：
+- 对未完成的任务诚实报告"未完成"，不回避
+- 对测试有效性严格评估：mock了关键依赖的测试标记为"有效性存疑"
+- 不遗漏计划中的任何任务，即使未完成也要列出
+- 结论基于客观事实，不基于"看起来正确"或"应该实现了"
 ```
 
 #### Challenger 职责：推翻而非补充
@@ -151,8 +164,10 @@ The Challenger probes these dimensions:
 1. 主会话创建输出目录: docs/iterations/{name}/round-N/verification/
 
 2. 启动 Builder subagent (run_in_background: true):
-   prompt中包含: "将完整行为清单写入 docs/iterations/{name}/round-N/verification/builder-manifest.md"
-   同时: "完成后只返回一行摘要: 'Builder完成, 发现X个功能点, Y个有测试证据'"
+   prompt中包含: "先读取本轮计划 (round-N/plan.md)，对照计划中的每个任务客观审核完成状态"
+   prompt中包含: "将完整客观事实清单写入 docs/iterations/{name}/round-N/verification/builder-manifest.md"
+   prompt中包含: "对未完成的任务也要列出，标明原因"
+   同时: "完成后只返回一行摘要: 'Builder完成, X个已完成/Y个未完成/Z个部分完成'"
 
 3. 等待Builder完成:
    Read builder-manifest.md 确认输出存在
@@ -326,36 +341,46 @@ P2/P3 issues are logged for next round but don't block the current round.
 
 ```
 ═══════════════════════════════════════════════════════
-任务1: Builder — 证明 [流程名称] 已实现
+任务1: Builder — 客观审核 [流程名称] 的完成状态
 ═══════════════════════════════════════════════════════
 
-你是Builder角色。你的任务是**证明**以下流程已完整实现且测试通过。
+你是Builder角色（客观审核者）。你的任务是**客观审核**以下流程的开发完成状态，而非辩护或证明。
+
+**先读取本轮计划**: {round_plan_path}
 
 流程: [完整链路描述]
 
-请执行以下步骤，每步必须有具体证据：
+请执行以下步骤，如实报告：
 
-1. 实现证据
-   - 读取相关源代码文件
+1. 计划完成状态
+   - 对照 plan.md 中的每个任务，逐一报告完成状态
+   - ✅完成：代码已实现 + 测试通过 + 测试有效
+   - ⬜未完成：代码未实现或测试未通过
+   - 🔄部分完成：代码实现但测试缺失/无效
+   - 对未完成的任务诚实说明原因
+
+2. 实现证据（仅对已完成的任务）
    - 指出每个功能点的具体实现位置（文件:行号）
    - 确认代码逻辑覆盖了所有场景
 
-2. 测试证据
+3. 测试证据
    - 运行相关测试（按模块，禁止全量）: `npx vitest run [相关测试文件或目录]`
    - 记录每个测试的通过/失败状态
    - 确认测试覆盖了正常/异常/边界场景
 
-3. 集成证据
-   - 确认测试不是mock了关键依赖
+4. 测试有效性评估（关键步骤）
+   - 确认测试不是mock了关键依赖 → 标记为"有效"
+   - 如果mock了关键系统核心路径 → 标记为"有效性存疑"并说明
    - 确认测试验证了系统间的真实交互
    - 确认完整链路有端到端测试
 
-4. 产出行为清单
+5. 产出客观事实清单
    每项格式:
-   | 功能点 | 实现位置 | 测试文件 | 测试结果 | 覆盖场景 |
+   | 计划任务ID | 完成状态 | 实现位置 | 测试文件 | 测试结果 | 测试有效性 | 覆盖场景 |
+   未完成任务也必须列出，标明"未完成"及原因。
 
 **将完整结果写入文件: {output_path}/builder-manifest.md**
-完成后只返回一行摘要: "Builder完成, X个功能点有证据, Y个无证据"
+完成后只返回一行摘要: "Builder完成, X个已完成/Y个未完成/Z个部分完成, A个测试有效性存疑"
 ```
 
 ```
@@ -491,10 +516,10 @@ Create iteration report and plan next round. All docs go to `docs/iterations/{na
 > **迭代周期**: 第N轮 — [主题]
 
 ## 1. 对抗性评测发现
-### Builder 行为清单
-| ID | 功能 | 预期行为 | 假设 |
-|----|------|---------|------|
-| B-01 | ... | ... | ... |
+### Builder 客观事实清单
+| ID | 计划任务 | 完成状态 | 测试结果 | 测试有效性 |
+|----|---------|:--------:|---------|:---------:|
+| B-01 | ... | ✅/⬜/🔄 | pass/fail | 有效/存疑 |
 
 ### Challenger 攻击结果
 | ID | 攻击维度 | 攻击方式 | 结果 | Judge判定 |
@@ -786,10 +811,10 @@ docs/
 
 ## 1. 对抗性评测发现
 
-### Builder 行为清单
-| ID | 功能 | 预期行为 | 假设 | 状态 |
-|----|------|---------|------|:----:|
-| B-01 | ... | ... | ... | ✅/❌ |
+### Builder 客观事实清单
+| ID | 计划任务 | 完成状态 | 测试结果 | 测试有效性 |
+|----|---------|:--------:|---------|:---------:|
+| B-01 | ... | ✅/⬜/🔄 | pass/fail | 有效/存疑 |
 
 ### Challenger 攻击结果
 | ID | 攻击维度 | 攻击方式 | 结果 | Judge判定 |
@@ -928,7 +953,7 @@ Large outputs returned to the main session cause context pollution, making subse
 ```
 docs/iterations/{name}/round-N/
 ├── verification/                    # 核验输出目录
-│   ├── builder-manifest.md         # Builder 行为清单
+│   ├── builder-manifest.md         # Builder 客观事实清单
 │   ├── challenger-attack.md        # Challenger 攻击报告
 │   ├── judge-ruling.md             # Judge 裁决报告
 │   ├── builder-round2.md           # 二次辩论 Builder（如有）
@@ -1051,7 +1076,7 @@ Task(B builder-batch2): 验证A+B域 → 写入 verification/builder-AB.md
 10. **Skipping verification phase** — Must use adversarial 3-role verification
 11. **Assuming tests pass** — Must actually run tests and verify results, never assume
 12. **Incomplete coverage** — Must cover 100% of features and flow paths
-13. **Builder as describer** — Builder must prove with evidence, not describe behavior
+13. **Builder as defender** — Builder must objectively audit plan completion status, not defend/prove implementation. Report unfinished tasks honestly
 14. **Challenger as complimenter** — Challenger must try to disprove, not add more tests
 15. **Judge as compromiser** — Judge must decide based on evidence, not split the difference
 16. **Verification as test execution** — Verification is adversarial debate, not running tests
