@@ -203,7 +203,10 @@ Merge adversarial findings with systematic analysis.
 4. Categorize: functional / UX / performance / architecture / data
 5. Prioritize: P0 (crash/security) → P1 (broken feature) → P2 (UX/arch) → P3 (minor)
 6. Identify root causes — not just symptoms
-7. Create issue tracker (ID, description, severity, source: builder/challenger/judge)
+7. 创建 issues.md（问题追踪清单）→ 写入 docs/iterative-devs/{name}/rounds/round-N/issues.md
+   - 每个问题分配唯一 ID（I-01, I-02, ...）
+   - 记录: 严重度、类型、来源(B/C/J)、描述、涉及文件、状态
+   - issues.md 是本轮唯一的问题追踪源，后续所有修复状态变更都在此更新
 ```
 
 ### Step 3: 修复问题 (Fix Issues)
@@ -647,8 +650,8 @@ Create iteration report and plan next round. All docs go to `docs/iterative-devs
 | 全局 | 迭代总计划 | `PLAN.md` | `docs/iterative-devs/{name}/` | 迭代开始前，贯穿全局 |
 | 全局 | 迭代进度 | `PROGRESS.md` | `docs/iterative-devs/{name}/` | 每轮结束时更新 |
 | 轮次 | 轮次计划 | `rounds/round-N/plan.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 每轮开始前（上轮结束时生成） |
-| 轮次 | 轮次报告 | `rounds/round-N/report.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 每轮结束 |
-| 轮次 | 问题追踪 | `rounds/round-N/issues.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 对抗性评测后 |
+| 轮次 | 问题追踪 | `rounds/round-N/issues.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 对抗性评测后（Step 2 创建） |
+| 轮次 | 轮次报告 | `rounds/round-N/report.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 每轮结束（Step 10 生成） |
 | 轮次 | 架构审查 | `rounds/round-N/arch-review.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 架构审查后 |
 | 轮次 | 行为清单 | `rounds/round-N/behavior-manifest.md` | `docs/iterative-devs/{name}/rounds/round-N/` | Builder输出 |
 | 全局 | 迭代总结 | `SUMMARY.md` | `docs/iterative-devs/{name}/` | 迭代完成时 |
@@ -718,13 +721,22 @@ docs/
 
 > 模板文件: `references/tmpl-summary.md`
 
-### Template: `docs/iterative-devs/{name}/rounds/round-N/report.md`
-
-> 模板文件: `references/tmpl-report.md`
-
 ### Template: `docs/iterative-devs/{name}/rounds/round-N/issues.md`
 
+> **问题追踪源文件**。对抗性评测后（Step 2）创建，是本轮唯一的问题追踪源。
+> 修复过程中实时更新每个问题的状态（✅/➡️），每修复一个即时标记。
+> 轮次结束时，report.md "剩余问题" 从此文件派生（取状态为 ➡️ 的项）。
+>
 > 模板文件: `references/tmpl-issues.md`
+
+### Template: `docs/iterative-devs/{name}/rounds/round-N/report.md`
+
+> **轮次汇总报告**。每轮结束时（Step 10）生成，是 issues.md 的下游文档。
+> Section 1 "对抗性评测发现" 汇总 Builder/Challenger/Judge 的原始结果。
+> Section 7 "剩余问题" 从 issues.md 中状态为 ➡️ 的问题派生，**不是独立记录**。
+> 传递链: issues.md(源) → report.md "剩余问题" → PROGRESS.md 待修复项 → 下轮 plan.md 遗留任务
+>
+> 模板文件: `references/tmpl-report.md`
 
 ### Template: `docs/iterative-devs/{name}/rounds/round-N/arch-review.md`
 
