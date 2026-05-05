@@ -835,6 +835,9 @@ Task(B builder-batch2): 验证A+B域 → 写入 verification/builder-AB.md
 ### Main Session Responsibilities (ONLY)
 
 ```
+核心原则: 主会话仅负责任务编排，所有实际工作（代码读写、测试运行、修复实现）
+           通过 subagent 执行。主会话不直接动手，只做调度。
+
 主会话只负责:
 1. 创建任务列表 (TaskCreate)
 2. 分发子任务 (Task with subagent)
@@ -844,12 +847,19 @@ Task(B builder-batch2): 验证A+B域 → 写入 verification/builder-AB.md
 6. 生成汇总文档 (verification-summary.md, report.md)
 7. 更新进度文档 (PROGRESS.md)
 8. 编排下一轮流程
+9. 子任务未完成时，继续编排新的 subagent 接着处理，直到本轮问题全部修复
+
+子任务失败/未完成时的处理:
+- subagent 返回结果不完整 → 读取其输出文件，分析缺口，编排新 subagent 补齐
+- subagent 修复不彻底 → 编排新 subagent 针对剩余问题继续修复
+- 循环编排直到 issues.md 中所有 P0/P1 状态为 ✅ 或 ➡️
 
 主会话禁止:
 - 直接运行测试（交给subagent）
 - 直接读取大量源代码（交给subagent）
 - 直接修复代码（交给subagent）
 - 将subagent的完整返回纳入上下文
+- 因"子任务失败"而放弃问题 — 必须继续编排直到完成
 ```
 
 ## Metrics to Track
