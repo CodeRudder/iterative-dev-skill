@@ -931,6 +931,7 @@ Task(B builder-batch2): 验证A+B域 → 写入 verification/builder-AB.md
 20. **Running full test suite during iteration** — Only run targeted module tests during inner loop; full suite reserved for final acceptance only
 21. **Dropping issues between rounds** — Every issue must have a final state (✅/➡️). Issues in issues.md must appear in report.md, PROGRESS.md, and next round's plan.md. Break in the chain = lost issue
 22. **Writing next plan without reading PROGRESS.md** — Must read PROGRESS.md "待修复项" before writing next round's plan; all 🔄 items must appear as "遗留任务"
+23. **Auto-closing tasks/issues with excuses** — Never close tasks or issues with reasons like "design decision", "not applicable", "expected behavior", or "won't fix". Only four statuses allowed: ⬜待实现 / 🔄处理中 / ✅已实现 / ❌阻塞. If a task/issue seems unnecessary, mark it ❌阻塞 with reason and let the user decide. AI must never self-close any planned task or discovered defect.
 
 ## Trigger Phrases
 
