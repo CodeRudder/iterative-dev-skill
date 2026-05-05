@@ -222,6 +222,8 @@ P3: Minor issues — backlog
 - Run tests after each fix to catch regressions
 - Use subagents for independent fixes (parallel)
 - Never skip verification after a fix
+- **P0/P1 应在本轮修复**，正常情况下不允许遗留到下一轮
+- **每修复一个问题，即时更新 issues.md 中该问题的状态为 ✅**，不要等到轮次结束
 
 ### Step 4: 多维度评测 (Multi-dimensional Evaluation)
 
@@ -288,19 +290,26 @@ IF P0=0 AND P1=0:
 
 **问题传递规则 (CRITICAL):**
 
-未在本轮修复的所有问题（P2/P3，以及内循环中降级但未关闭的 P0/P1）必须完整传递到下轮，**禁止丢失**：
+所有未修复问题必须传递到下轮，**禁止丢失**：
+P0/P1 正常情况下应在本轮修复，不限制传递但应尽力避免。
 
 ```
-1. 每个问题必须有明确的最终状态之一:
+1. P0/P1 处理规则:
+   - 内循环 (Step 3-7) 持续到 P0=0 AND P1=0 才能退出
+   - 每修复一个问题，即时更新 issues.md 状态为 ✅
+   - 正常情况下 P0/P1 应在本轮修复完成
+   - 如传递到下轮，需标注原因
+
+2. P2/P3 传递规则:
    - ✅ 已修复 (本轮内关闭)
    - ➡️ 传递下轮 (写入 PROGRESS.md 待修复项 + 下轮 plan.md)
 
-2. 禁止出现以下情况:
+3. 禁止出现以下情况:
    - ❌ 问题出现在 issues.md 但 report.md "剩余问题"中找不到
    - ❌ report.md "剩余问题"中有条目但 PROGRESS.md "待修复项"中没有
    - ❌ PROGRESS.md "待修复项"中有条目但下轮 plan.md 中没有对应任务
 
-3. 传递链完整性校验 (Step 10 文档记录时执行):
+4. 传递链完整性校验 (Step 10 文档记录时执行):
    issues.md 全部问题 → 逐条核对 → report.md "剩余问题" → PROGRESS.md "待修复项" → 下轮 plan.md "遗留任务"
    任一环节缺失 = 校验失败，必须补齐
 ```
