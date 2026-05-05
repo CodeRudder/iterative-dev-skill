@@ -649,7 +649,7 @@ Create iteration report and plan next round. All docs go to `docs/iterative-devs
 |:----:|----------|----------|-----------|------|
 | 全局 | 迭代总计划 | `PLAN.md` | `docs/iterative-devs/{name}/` | 迭代开始前，贯穿全局 |
 | 全局 | 迭代进度 | `PROGRESS.md` | `docs/iterative-devs/{name}/` | 每轮结束时更新 |
-| 全局 | 业务流程进度 | `flow-process.md` | `docs/iterative-devs/{name}/` | 迭代开始时创建，开发过程中实时更新 |
+| 全局 | 业务流程进度 | `FLOW-PROCESS.md` | `docs/iterative-devs/{name}/` | 迭代开始时创建，开发过程中实时更新 |
 | 轮次 | 轮次计划 | `rounds/round-N/plan.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 每轮开始前（上轮结束时生成） |
 | 轮次 | 问题追踪 | `rounds/round-N/issues.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 对抗性评测后（Step 2 创建） |
 | 轮次 | 轮次报告 | `rounds/round-N/report.md` | `docs/iterative-devs/{name}/rounds/round-N/` | 每轮结束（Step 10 生成） |
@@ -667,7 +667,7 @@ docs/
     ├── {iteration-name}/              # 迭代主题，如 map-system, combat-system
     │   ├── PLAN.md                    # 迭代总计划(贯穿全局，迭代开始前写)
     │   ├── PROGRESS.md                # 迭代进度(每轮结束更新，快速了解全局状态)
-    │   ├── flow-process.md            # 业务流程进度(面向用户，流程完成情况)
+    │   ├── FLOW-PROCESS.md            # 业务流程进度(面向用户，流程完成情况)
     │   ├── rounds/                    # 每轮过程文档
     │   │   ├── round-1/               # 第1轮
     │   │   │   ├── plan.md           # 本轮计划(第1轮从PLAN.md拆解)
@@ -719,12 +719,12 @@ docs/
 >
 > 模板文件: `references/tmpl-round-plan.md`
 
-### Template: `docs/iterative-devs/{name}/flow-process.md`
+### Template: `docs/iterative-devs/{name}/FLOW-PROCESS.md`
 
 > **业务流程进度**（面向用户）。来自业务流程文档，展示业务流程的完成情况。
 > 每个业务流程/子流程一行。每个子流程开始及完成时即时更新状态和完成度。
 >
-> 模板文件: `references/tmpl-flow-process.md`
+> 模板文件: `references/tmpl-FLOW-PROCESS.md`
 
 ### Template: `docs/iterative-devs/{name}/SUMMARY.md`
 
@@ -875,7 +875,7 @@ Task(B builder-batch2): 验证A+B域 → 写入 verification/builder-AB.md
 4. 读取结果文件摘要 (Read tool, 只读关键结论)
 5. 向用户汇报进展
 6. 生成汇总文档 (verification-summary.md, report.md)
-7. 更新进度文档 (PROGRESS.md, flow-process.md)
+7. 更新进度文档 (PROGRESS.md, FLOW-PROCESS.md)
 8. 编排下一轮流程
 9. 子任务未完成时，继续编排新的 subagent 接着处理，直到本轮问题全部修复
 
