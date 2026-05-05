@@ -667,7 +667,7 @@ docs/
     ├── {iteration-name}/              # 迭代主题，如 map-system, combat-system
     │   ├── PLAN.md                    # 迭代总计划(贯穿全局，迭代开始前写)
     │   ├── PROGRESS.md                # 迭代进度(每轮结束更新，快速了解全局状态)
-    │   ├── flow-process.md            # 业务流程进度(面向用户，功能完成情况)
+    │   ├── flow-process.md            # 业务流程进度(面向用户，流程完成情况)
     │   ├── rounds/                    # 每轮过程文档
     │   │   ├── round-1/               # 第1轮
     │   │   │   ├── plan.md           # 本轮计划(第1轮从PLAN.md拆解)
@@ -721,8 +721,8 @@ docs/
 
 ### Template: `docs/iterative-devs/{name}/flow-process.md`
 
-> **业务流程进度**（面向用户）。迭代开始时从 PLAN.md 拆解创建，展示业务功能完成情况。
-> 每个业务功能/子任务一行。开发过程中实时更新状态和完成度。
+> **业务流程进度**（面向用户）。迭代开始时从 PLAN.md 拆解创建，展示业务流程完成情况。
+> 每个业务流程/子流程一行。开发过程中实时更新状态和完成度。
 > 主会话在每轮结束后同步更新此文件。
 >
 > 模板文件: `references/tmpl-flow-process.md`
