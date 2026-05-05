@@ -286,7 +286,24 @@ IF P0=0 AND P1=0:
   → Proceed to Step 9 (核验环节)
 ```
 
-P2/P3 issues are logged for next round but don't block the current round.
+**问题传递规则 (CRITICAL):**
+
+未在本轮修复的所有问题（P2/P3，以及内循环中降级但未关闭的 P0/P1）必须完整传递到下轮，**禁止丢失**：
+
+```
+1. 每个问题必须有明确的最终状态之一:
+   - ✅ 已修复 (本轮内关闭)
+   - ➡️ 传递下轮 (写入 PROGRESS.md 待修复项 + 下轮 plan.md)
+
+2. 禁止出现以下情况:
+   - ❌ 问题出现在 issues.md 但 report.md "剩余问题"中找不到
+   - ❌ report.md "剩余问题"中有条目但 PROGRESS.md "待修复项"中没有
+   - ❌ PROGRESS.md "待修复项"中有条目但下轮 plan.md 中没有对应任务
+
+3. 传递链完整性校验 (Step 10 文档记录时执行):
+   issues.md 全部问题 → 逐条核对 → report.md "剩余问题" → PROGRESS.md "待修复项" → 下轮 plan.md "遗留任务"
+   任一环节缺失 = 校验失败，必须补齐
+```
 
 ### Step 9: 核验环节 (Verification Phase)
 
@@ -501,10 +518,11 @@ Create iteration report and plan next round. All docs go to `docs/iterative-devs
 2. **更新进度文档** → `docs/iterative-devs/{name}/PROGRESS.md`
    - 追加本轮摘要行到轮次记录表
    - 更新质量指标当前值
+   - **同步待修复项**: 将本轮未修复问题追加到"待修复项"表，已修复的标记为 ✅
    - 更新当前阶段和下一步
 3. **生成下轮计划** → `docs/iterative-devs/{name}/rounds/round-N+1/plan.md`
    - 从 `PLAN.md`(总计划) 拆解下轮焦点
-   - 合并本轮剩余问题 + 新发现
+   - **必须包含 PROGRESS.md 中所有状态为 🔄 的待修复项**，逐条列为"遗留任务"
    - 每3轮还需合并复盘改进措施
    - 包含：焦点领域、对抗性评测重点、质量目标
 4. **每3轮进行复盘**（当 N % 3 == 0 时）→ 写入 `report.md` Section 9
@@ -871,6 +889,8 @@ Task(B builder-batch2): 验证A+B域 → 写入 verification/builder-AB.md
 18. **Running Builder/Challenger/Judge in parallel** — They are sequential: Builder output file → Challenger reads it → Judge reads both
 19. **Main session doing real work** — Main session orchestrates only; code reading, test running, and fixing are subagent tasks
 20. **Running full test suite during iteration** — Only run targeted module tests during inner loop; full suite reserved for final acceptance only
+21. **Dropping issues between rounds** — Every issue must have a final state (✅/➡️). Issues in issues.md must appear in report.md, PROGRESS.md, and next round's plan.md. Break in the chain = lost issue
+22. **Writing next plan without reading PROGRESS.md** — Must read PROGRESS.md "待修复项" before writing next round's plan; all 🔄 items must appear as "遗留任务"
 
 ## Trigger Phrases
 
